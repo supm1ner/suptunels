@@ -17,6 +17,9 @@ type Model struct {
 	LogChan   chan string
 }
 
+type TickMsg time.Time
+type LogMsg string
+
 func (m Model) Init() tea.Cmd {
 	return tea.Batch(tick(), m.waitForLogs())
 }
