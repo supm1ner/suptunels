@@ -91,7 +91,7 @@ func (c *Client) handleStream(ctx context.Context, stream *yamux.Stream) {
 	}
 	tunnelID := string(idBuf)
 
-	// Find tunnel config
+	// Find tunnel config by ID or use a default mapping
 	var t config.TunnelConfig
 	found := false
 	for _, tc := range c.cfg.Tunnels {
@@ -102,9 +102,27 @@ func (c *Client) handleStream(ctx context.Context, stream *yamux.Stream) {
 		}
 	}
 
+	// Fallback: if ID not found, check if it's a numeric port ID (common for manual configs)
 	if !found {
-		log.Printf("[Error] Tunnel not found: %s", tunnelID)
-		return
+		for _, tc := range c.cfg.Tunnels {
+			if fmt.Sprintf("%d", tc.ExternalPort) == tunnelID {
+				t = tc
+				found = true
+				break
+			}
+		}
+	}
+
+	if !found {
+		log.Printf("[Error] Tunnel not found for ID: %s. Using default internal port from ID if possible.", tunnelID)
+		// If ID is a number, try to use it as port directly
+		var p int
+		if _, err := fmt.Sscanf(tunnelID, "%d", &p); err == nil {
+			t = config.TunnelConfig{Name: "Auto", InternalPort: p}
+			found = true
+		} else {
+			return
+		}
 	}
 
 	var localConn net.Conn
