@@ -26,13 +26,13 @@ func NewServer(cfg *config.Config, collector *metrics.Collector) *Server {
 }
 
 func (s *Server) Start(ctx context.Context) error {
-	l, err := net.Listen("tcp", s.cfg.Server.ListenAddr)
+	l, err := net.Listen("tcp", s.cfg.Server.ControlAddr)
 	if err != nil {
 		return err
 	}
 	defer l.Close()
 
-	log.Printf("[Info] Server listening on %s", s.cfg.Server.ListenAddr)
+	log.Printf("[Info] Tunnel server listening on %s", s.cfg.Server.ControlAddr)
 
 	for {
 		conn, err := l.Accept()

@@ -20,6 +20,7 @@ import (
 
 func main() {
 	port := flag.String("port", "8080", "Web UI port")
+	controlPort := flag.String("tunnel-port", "8081", "Tunnel control port")
 	secret := flag.String("secret", "supersecret", "API Secret")
 	publicIP := flag.String("public-ip", "0.0.0.0", "Public IP")
 	flag.Parse()
@@ -29,6 +30,7 @@ func main() {
 		log.Fatal(err)
 	}
 	cfg.Server.ListenAddr = ":" + *port
+	cfg.Server.ControlAddr = ":" + *controlPort
 	cfg.Server.Secret = *secret
 	cfg.Server.PublicAddr = *publicIP
 

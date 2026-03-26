@@ -13,9 +13,10 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	ListenAddr string `yaml:"listen_addr"`
-	PublicAddr string `yaml:"public_addr"`
-	Secret     string `yaml:"secret"`
+	ListenAddr  string `yaml:"listen_addr"`  // Web UI
+	ControlAddr string `yaml:"control_addr"` // Tunnel control (Yamux)
+	PublicAddr  string `yaml:"public_addr"`
+	Secret      string `yaml:"secret"`
 }
 
 type TunnelConfig struct {
