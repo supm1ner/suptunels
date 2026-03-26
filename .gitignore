@@ -1,0 +1,12 @@
+# Binaries
+suptunnels-server
+suptunnels-client
+*.exe
+
+# Go
+go.sum
+
+# IDEs
+.vscode/
+.idea/
+*.swp

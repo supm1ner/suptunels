@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SupTunnels Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #121212; color: #e0e0e0; margin: 0; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .card { background: #1e1e1e; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { text-align: left; padding: 12px; border-bottom: 1px solid #333; }
+        th { color: #888; text-transform: uppercase; font-size: 0.8rem; }
+        .status-online { color: #4caf50; }
+        .status-offline { color: #f44336; }
+        .btn { background: #2196f3; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; }
+        .btn-delete { background: #f44336; }
+        .form-group { margin-bottom: 15px; }
+        input, select { background: #333; border: 1px solid #444; color: white; padding: 8px; border-radius: 4px; width: 100%; box-sizing: border-box; }
+        .chart-container { height: 300px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>SupTunnels</h1>
+            <button class="btn" onclick="showAddTunnel()">+ Add Tunnel</button>
+        </div>
+
+        <div class="card">
+            <h2>Active Tunnels</h2>
+            <table id="tunnelsTable">
+                <thead>
+                    <tr>
+                        <th>Status</th>
+                        <th>Name</th>
+                        <th>External</th>
+                        <th>Internal</th>
+                        <th>Type</th>
+                        <th>RX</th>
+                        <th>TX</th>
+                        <th>Conns</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+        <div class="card chart-container">
+            <canvas id="trafficChart"></canvas>
+        </div>
+
+        <div id="addTunnelModal" class="card" style="display:none;">
+            <h2>Add New Tunnel</h2>
+            <div class="form-group">
+                <label>Name</label>
+                <input type="text" id="t_name" placeholder="Minecraft Java">
+            </div>
+            <div class="form-group">
+                <label>External Port</label>
+                <input type="number" id="t_ext" placeholder="25565">
+            </div>
+            <div class="form-group">
+                <label>Internal Port</label>
+                <input type="number" id="t_int" placeholder="25565">
+            </div>
+            <div class="form-group">
+                <label>Type</label>
+                <select id="t_type">
+                    <option value="tcp">TCP</option>
+                    <option value="udp">UDP</option>
+                    <option value="both">Both</option>
+                </select>
+            </div>
+            <button class="btn" onclick="addTunnel()">Create</button>
+            <button class="btn btn-delete" onclick="hideAddTunnel()">Cancel</button>
+        </div>
+    </div>
+
+    <script>
+        let secret = prompt("Enter API Secret", "supersecret");
+        let stats = [];
+        let chart;
+
+        function updateTable() {
+            const tbody = document.querySelector("#tunnelsTable tbody");
+            tbody.innerHTML = stats.map(s => `
+                <tr>
+                    <td><span class="status-${s.status}">${s.status}</span></td>
+                    <td>${s.name}</td>
+                    <td>:${s.external_port || '-'}</td>
+                    <td>${s.internal_port || '-'}</td>
+                    <td>${s.type || '-'}</td>
+                    <td>${formatBytes(s.rx)}</td>
+                    <td>${formatBytes(s.tx)}</td>
+                    <td>${s.connections}</td>
+                    <td><button class="btn btn-delete" onclick="deleteTunnel('${s.id}')">Delete</button></td>
+                </tr>
+            `).join('');
+        }
+
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function initChart() {
+            const ctx = document.getElementById('trafficChart').getContext('2d');
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Total RX',
+                        borderColor: '#4caf50',
+                        data: []
+                    }, {
+                        label: 'Total TX',
+                        borderColor: '#2196f3',
+                        data: []
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        }
+
+        function updateChart() {
+            const totalRX = stats.reduce((acc, s) => acc + s.rx, 0);
+            const totalTX = stats.reduce((acc, s) => acc + s.tx, 0);
+            const now = new Date().toLocaleTimeString();
+            
+            chart.data.labels.push(now);
+            chart.data.datasets[0].data.push(totalRX);
+            chart.data.datasets[1].data.push(totalTX);
+
+            if (chart.data.labels.length > 20) {
+                chart.data.labels.shift();
+                chart.data.datasets[0].data.shift();
+                chart.data.datasets[1].data.shift();
+            }
+            chart.update();
+        }
+
+        function connectWS() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const ws = new WebSocket(`${protocol}//${window.location.host}/api/ws`);
+            ws.onmessage = (e) => {
+                stats = JSON.parse(e.data);
+                updateTable();
+                updateChart();
+            };
+            ws.onclose = () => setTimeout(connectWS, 1000);
+        }
+
+        function showAddTunnel() { document.getElementById('addTunnelModal').style.display = 'block'; }
+        function hideAddTunnel() { document.getElementById('addTunnelModal').style.display = 'none'; }
+
+        async function addTunnel() {
+            const name = document.getElementById('t_name').value;
+            const ext = parseInt(document.getElementById('t_ext').value);
+            const int = parseInt(document.getElementById('t_int').value);
+            const type = document.getElementById('t_type').value;
+
+            await fetch('/api/tunnels', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-API-Token': secret },
+                body: JSON.stringify({ name, external_port: ext, internal_port: int, type, enabled: true })
+            });
+            hideAddTunnel();
+        }
+
+        async function deleteTunnel(id) {
+            await fetch(`/api/tunnels/${id}`, {
+                method: 'DELETE',
+                headers: { 'X-API-Token': secret }
+            });
+        }
+
+        initChart();
+        connectWS();
+    </script>
+</body>
+</html>
