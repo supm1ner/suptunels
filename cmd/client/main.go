@@ -20,10 +20,15 @@ func main() {
 	secret := flag.String("secret", "supersecret", "API Secret")
 	flag.Parse()
 
-	cfg, err := config.Load("")
+	// Redirect logs to TUI
+	logChan := make(chan string, 100)
+	log.SetOutput(&logWriter{ch: logChan})
+
+	cfg, cfgPath, err := config.Load("")
 	if err != nil {
 		log.Fatal(err)
 	}
+	log.Printf("[Info] Config loaded from %s", cfgPath)
 	cfg.Server.Secret = *secret
 
 	collector := metrics.NewCollector()
@@ -40,10 +45,12 @@ func main() {
 	}()
 
 	// Start TUI
-	p := tea.NewProgram(tui.Model{
+	model := tui.Model{
 		Collector: collector,
 		IsServer:  false,
-	}, tea.WithAltScreen())
+		LogChan:   logChan,
+	}
+	p := tea.NewProgram(model, tea.WithAltScreen())
 
 	go func() {
 		sig := make(chan os.Signal, 1)
@@ -56,4 +63,13 @@ func main() {
 	if _, err := p.Run(); err != nil {
 		log.Fatal(err)
 	}
+}
+
+type logWriter struct {
+	ch chan string
+}
+
+func (w *logWriter) Write(p []byte) (n int, err error) {
+	w.ch <- string(p)
+	return len(p), nil
 }

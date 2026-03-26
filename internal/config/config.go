@@ -28,7 +28,7 @@ type TunnelConfig struct {
 	Enabled      bool   `yaml:"enabled"`
 }
 
-func Load(path string) (*Config, error) {
+func Load(path string) (*Config, string, error) {
 	if path == "" {
 		// Check current directory first
 		if _, err := os.Stat("config.yaml"); err == nil {
@@ -48,18 +48,18 @@ func Load(path string) (*Config, error) {
 					Secret:     "supersecret",
 				},
 				Tunnels: []TunnelConfig{},
-			}, nil
+			}, path, nil
 		}
-		return nil, err
+		return nil, path, err
 	}
 	defer f.Close()
 
 	var cfg Config
 	if err := yaml.NewDecoder(f).Decode(&cfg); err != nil {
-		return nil, err
+		return nil, path, err
 	}
 
-	return &cfg, nil
+	return &cfg, path, nil
 }
 
 func (c *Config) Save(path string) error {

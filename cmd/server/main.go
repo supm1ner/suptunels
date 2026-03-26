@@ -25,10 +25,16 @@ func main() {
 	publicIP := flag.String("public-ip", "0.0.0.0", "Public IP")
 	flag.Parse()
 
-	cfg, err := config.Load("")
+	// Redirect logs to TUI
+	logChan := make(chan string, 100)
+	log.SetOutput(&logWriter{ch: logChan})
+
+	cfg, cfgPath, err := config.Load("")
 	if err != nil {
 		log.Fatal(err)
 	}
+	log.Printf("[Info] Config loaded from %s", cfgPath)
+
 	cfg.Server.ListenAddr = ":" + *port
 	cfg.Server.ControlAddr = ":" + *controlPort
 	cfg.Server.Secret = *secret
@@ -65,10 +71,12 @@ func main() {
 	model := tui.Model{
 		Collector: collector,
 		IsServer:  true,
+		LogChan:   logChan,
 	}
 	p := tea.NewProgram(model, tea.WithAltScreen())
 
 	// Initialize tunnels from config in collector (offline)
+	log.Printf("[Info] Found %d tunnels in config", len(cfg.Tunnels))
 	for _, t := range cfg.Tunnels {
 		collector.SetStatus(t.ID, t.Name, "offline", t.ExternalPort, t.InternalPort, t.Type)
 	}
@@ -85,4 +93,13 @@ func main() {
 	if _, err := p.Run(); err != nil {
 		log.Fatal(err)
 	}
+}
+
+type logWriter struct {
+	ch chan string
+}
+
+func (w *logWriter) Write(p []byte) (n int, err error) {
+	w.ch <- string(p)
+	return len(p), nil
 }

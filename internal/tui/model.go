@@ -14,15 +14,18 @@ type Model struct {
 	Stats     []metrics.TunnelStats
 	IsServer  bool
 	Connected bool
+	LogChan   chan string
 }
-
-type TickMsg time.Time
 
 func (m Model) Init() tea.Cmd {
-	return tick()
+	return tea.Batch(tick(), m.waitForLogs())
 }
 
-type LogMsg string
+func (m Model) waitForLogs() tea.Cmd {
+	return func() tea.Msg {
+		return LogMsg(<-m.LogChan)
+	}
+}
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
@@ -36,7 +39,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if len(m.Logs) > 10 {
 			m.Logs = m.Logs[1:]
 		}
-		return m, nil
+		return m, m.waitForLogs()
 	case TickMsg:
 		m.Stats = m.Collector.GetStats()
 		m.Uptime = m.Collector.GetGlobalUptime()
