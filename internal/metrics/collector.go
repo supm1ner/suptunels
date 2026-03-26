@@ -6,14 +6,17 @@ import (
 )
 
 type TunnelStats struct {
-	ID        string    `json:"id"`
-	Name      string    `json:"name"`
-	RX        uint64    `json:"rx"`
-	TX        uint64    `json:"tx"`
-	Conns     int       `json:"connections"`
-	LastSeen  time.Time `json:"last_seen"`
-	Uptime    time.Time `json:"uptime"`
-	Status    string    `json:"status"` // "online", "offline"
+	ID           string    `json:"id"`
+	Name         string    `json:"name"`
+	ExternalPort int       `json:"external_port"`
+	InternalPort int       `json:"internal_port"`
+	Type         string    `json:"type"`
+	RX           uint64    `json:"rx"`
+	TX           uint64    `json:"tx"`
+	Conns        int       `json:"connections"`
+	LastSeen     time.Time `json:"last_seen"`
+	Uptime       time.Time `json:"uptime"`
+	Status       string    `json:"status"` // "online", "offline"
 }
 
 type Collector struct {
@@ -47,14 +50,17 @@ func (c *Collector) UpdateTX(id string, n uint64) {
 	}
 }
 
-func (c *Collector) SetStatus(id, name, status string) {
+func (c *Collector) SetStatus(id, name, status string, ext, int int, t string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if _, ok := c.stats[id]; !ok {
 		c.stats[id] = &TunnelStats{
-			ID:     id,
-			Name:   name,
-			Uptime: time.Now(),
+			ID:           id,
+			Name:         name,
+			ExternalPort: ext,
+			InternalPort: int,
+			Type:         t,
+			Uptime:       time.Now(),
 		}
 	}
 	c.stats[id].Status = status

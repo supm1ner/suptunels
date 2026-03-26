@@ -22,6 +22,8 @@ func (m Model) Init() tea.Cmd {
 	return tick()
 }
 
+type LogMsg string
+
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -29,6 +31,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "q", "ctrl+c":
 			return m, tea.Quit
 		}
+	case LogMsg:
+		m.Logs = append(m.Logs, string(msg))
+		if len(m.Logs) > 10 {
+			m.Logs = m.Logs[1:]
+		}
+		return m, nil
 	case TickMsg:
 		m.Stats = m.Collector.GetStats()
 		m.Uptime = m.Collector.GetGlobalUptime()

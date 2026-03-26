@@ -22,8 +22,8 @@ func (m *TunnelManager) HandleTCP(ctx context.Context, t config.TunnelConfig) {
 	m.mu.Lock()
 	m.active[t.ID] = &ActiveTunnel{Config: t, Listener: l}
 	m.mu.Unlock()
-	m.collector.SetStatus(t.ID, t.Name, "online")
-	defer m.collector.SetStatus(t.ID, t.Name, "offline")
+	m.collector.SetStatus(t.ID, t.Name, "online", t.ExternalPort, t.InternalPort, t.Type)
+	defer m.collector.SetStatus(t.ID, t.Name, "offline", t.ExternalPort, t.InternalPort, t.Type)
 
 	for {
 		conn, err := l.Accept()

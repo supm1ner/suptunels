@@ -62,10 +62,16 @@ func main() {
 	}()
 
 	// Start TUI
-	p := tea.NewProgram(tui.Model{
+	model := tui.Model{
 		Collector: collector,
 		IsServer:  true,
-	}, tea.WithAltScreen())
+	}
+	p := tea.NewProgram(model, tea.WithAltScreen())
+
+	// Initialize tunnels from config in collector (offline)
+	for _, t := range cfg.Tunnels {
+		collector.SetStatus(t.ID, t.Name, "offline", t.ExternalPort, t.InternalPort, t.Type)
+	}
 
 	go func() {
 		sig := make(chan os.Signal, 1)

@@ -35,9 +35,13 @@ func (m Model) renderTunnels() string {
 	s.WriteString(tableHeaderStyle.Render(header) + "\n")
 	s.WriteString(strings.Repeat("─", 80) + "\n")
 
+	if len(m.Stats) == 0 {
+		s.WriteString("   No active tunnels. Check your config.yaml and client connection.\n")
+	}
+
 	for i, st := range m.Stats {
 		row := fmt.Sprintf("%-3d │ %-20s │ :%-9d │ %-10d │ %-5s │ %-10s │ %-10s",
-			i+1, st.Name, st.ID, 0, st.Status, formatBytes(st.RX), formatBytes(st.TX))
+			i+1, st.Name, st.ExternalPort, st.InternalPort, st.Type, formatBytes(st.RX), formatBytes(st.TX))
 		s.WriteString(row + "\n")
 	}
 	return s.String()
@@ -52,7 +56,7 @@ func (m Model) renderMetrics() string {
 
 func (m Model) renderLogs() string {
 	if len(m.Logs) == 0 {
-		return " [14:32:15] New connection from 84.32.64.12:54321 → Minecraft Java\n [14:32:18] UDP session started for Plasmo Voice (192.168.1.5:4231)\n [14:33:02] Tunnel #3 (Plasmo) TX: 1.2 MB/s"
+		return " Waiting for logs...\n"
 	}
 	return strings.Join(m.Logs, "\n")
 }
