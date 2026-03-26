@@ -1,0 +1,19 @@
+server:
+  listen_addr: ":8080"      # Web UI
+  control_addr: ":8081"     # Tunnel control (Yamux)
+  secret: "supersecret"     # Change this!
+
+tunnels:
+  - id: "mc-java"
+    name: "Minecraft Java + Plasmo"
+    external_port: 25565
+    internal_port: 25565
+    type: "both"            # TCP for Minecraft, UDP for Plasmo Voice
+    enabled: true
+
+  - id: "ssh"
+    name: "SSH Tunnel"
+    external_port: 2222
+    internal_port: 22
+    type: "tcp"
+    enabled: false

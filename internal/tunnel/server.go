@@ -72,10 +72,13 @@ func (s *Server) handleClient(ctx context.Context, conn net.Conn) {
 	s.manager.SetSession(session)
 	
 	// Start tunnels
+	log.Printf("[Info] Loading %d tunnels from config", len(s.cfg.Tunnels))
 	for _, t := range s.cfg.Tunnels {
 		if !t.Enabled {
+			log.Printf("[Info] Tunnel %s is disabled, skipping", t.Name)
 			continue
 		}
+		log.Printf("[Info] Starting tunnel %s (%s) on port %d", t.Name, t.Type, t.ExternalPort)
 		switch t.Type {
 		case "tcp":
 			go s.manager.HandleTCP(ctx, t)
@@ -83,6 +86,8 @@ func (s *Server) handleClient(ctx context.Context, conn net.Conn) {
 			go s.manager.HandleUDP(ctx, t)
 		case "both":
 			go s.manager.HandleBoth(ctx, t)
+		default:
+			log.Printf("[Error] Unknown tunnel type: %s for %s", t.Type, t.Name)
 		}
 	}
 

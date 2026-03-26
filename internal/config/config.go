@@ -30,8 +30,13 @@ type TunnelConfig struct {
 
 func Load(path string) (*Config, error) {
 	if path == "" {
-		home, _ := os.UserHomeDir()
-		path = filepath.Join(home, ".suptunnels", "config.yaml")
+		// Check current directory first
+		if _, err := os.Stat("config.yaml"); err == nil {
+			path = "config.yaml"
+		} else {
+			home, _ := os.UserHomeDir()
+			path = filepath.Join(home, ".suptunnels", "config.yaml")
+		}
 	}
 
 	f, err := os.Open(path)
