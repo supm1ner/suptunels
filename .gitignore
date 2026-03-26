@@ -4,7 +4,7 @@ suptunnels-client
 *.exe
 
 # Go
-go.sum
+# go.sum (рекомендуется хранить в git для стабильности сборки)
 
 # IDEs
 .vscode/
